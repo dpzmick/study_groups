@@ -1,5 +1,5 @@
 from math import pow
-from random import choice
+from random import choice, shuffle
 import matplotlib.pyplot as plt
 
 ###### Parameters
@@ -33,6 +33,9 @@ class Group:
     def member_join(self):
         self.num_members += 1
 
+    def member_leave(self):
+        self.num_members -= 1
+
     def members(self):
         return self.num_members
 
@@ -59,19 +62,13 @@ def simulation():
 
 if __name__ == "__main__":
     print("optimal: %d" % (a/b))
-    simulation_results = []
+    simulation_results = [0] * numjoiners
     for i in xrange(0,trials):
-        simulation_results += map(lambda g: g.members(), simulation())
+        for result in map(lambda g: g.members(), simulation()):
+            simulation_results[result] += 1
 
-
-    flattened = [0] * (max(simulation_results) + 1)
-    for result in simulation_results:
-        flattened[result] += 1
-
-    counters = [i for i in range(0, max(simulation_results) + 1)]
 
     plt.title("a=%f, b=%f, trials=%d\nnumjoiners=%d, maxgroups=%d, optimal=%f" %
             (a, b, trials, numjoiners, maxgroups, (a/b)))
-    plt.bar([i for i in range(0, max(simulation_results) + 1)], flattened,
-            align='center')
+    plt.bar([i for i in range(0, numjoiners)], simulation_results, align='center')
     plt.show()
