@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 # a - the individual contribution factor. This is how much of a contribution on
 # individual will bring to the study group (assumed constant across all people
 # that may join the group)
-a = 1.0
+a = 2.0
 
 # b - the individual detriment factor. As the size of the group increases, the
 # and individuals ability to contribute decreases by this factor
@@ -16,9 +16,9 @@ b = 0.5
 maxgroups = 15
 
 # numjoiners - number of people to try and get in study group
-numjoiners = 13
+numjoiners = 10
 
-trials = 1000
+trials = 5000
 
 ##### Objects
 class Group:
@@ -63,19 +63,15 @@ if __name__ == "__main__":
     for i in xrange(0,trials):
         simulation_results += map(lambda g: g.members(), simulation())
 
-    print(simulation_results)
 
     flattened = [0] * (max(simulation_results) + 1)
     for result in simulation_results:
-        print result
         flattened[result] += 1
-
-    print flattened
 
     counters = [i for i in range(0, max(simulation_results) + 1)]
 
-    plt.title("a=%f, b=%f, trials=%d\nnumjoiners=%d, maxgroups=%d" %
-            (a, b, trials, numjoiners, maxgroups))
+    plt.title("a=%f, b=%f, trials=%d\nnumjoiners=%d, maxgroups=%d, optimal=%f" %
+            (a, b, trials, numjoiners, maxgroups, (a/b)))
     plt.bar([i for i in range(0, max(simulation_results) + 1)], flattened,
             align='center')
     plt.show()
