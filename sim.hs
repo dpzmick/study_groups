@@ -10,6 +10,9 @@ instance Ord Group where
 addMember :: Group -> Group
 addMember (Group s) = Group (s + 1)
 
+emptyGroups :: Integral a => a -> [Group]
+emptyGroups n = take (fromIntegral n) (map Group [0,0..])
+
 data Params = Params {
     memberContrib       :: Double,
     memberDetr          :: Double,
@@ -19,19 +22,26 @@ data Params = Params {
 }
 
 -- best fitness simulation without selflessness
--- bestFitNoSelflessSim :: Params -> (Group -> Params -> Double) -> [Group]
--- bestFitNoSelflessSim p fitnessFunc
---    = step p fitnessFunc (take (fromIntegral (maxGroups p)) (map Group [0,0..]))
+bestFitNoSelflessSim :: Params -> (Params -> Group -> Double) -> [Group]
+bestFitNoSelflessSim p f = bfnssHelper p f (emptyGroups (maxGroups p)) (numJoiners p)
+
+bfnssHelper :: Params -> (Params -> Group -> Double) -> [Group] -> Integer -> [Group]
+bfnssHelper _ _ acc 0 = acc
+bfnssHelper p f acc n = bfnssHelper p f (step p f acc) (n - 1)
 
 -- finds the group that maximizes the fitness function,
 -- if there is a tie, randomly pick one
 step :: Params -> (Params -> Group  -> Double) -> [Group] -> [Group]
 step p fitnessFunc state
-    = addMember (head sorted) : tail sorted
+    = case length maxes of
+          0     -> error "How did you do this"
+          1     -> addMember best : tail sorted
+          _     -> addMember best : tail sorted -- TODO explore other options
     where
         sorted = sortBy fitnessCmp state
-        fitnessCmp g1 g2 = fitnessFunc p g1 `compare` fitnessFunc p g2
-
+        best = head sorted
+        maxes = filter (\ g1 -> fitnessFunc p g1 == fitnessFunc p best) sorted
+        fitnessCmp g1 g2 = fitnessFunc p g2 `compare` fitnessFunc p g1
 
 -- user defined functions
 
