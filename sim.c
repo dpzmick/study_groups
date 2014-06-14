@@ -1,6 +1,7 @@
 /**
  * simple program that prints to stdout the results of a simulation in which
- * people join study groups
+ * people join study groups as a csv file where
+ * group_size, amount occurred
  *
  */
 
@@ -104,31 +105,44 @@ int * trial( params_t * ps, size_t * ret_len ) {
     return all_values;
 }
 
-int main(int argc, const char ** argv) {
-    // simulation parameters
-    params_t ps;
-    ps.member_contrib = 1.0;
-    ps.member_detriment = 0.5;
-    ps.num_groups = 5;
-    ps.num_joiners = 4;
+int intcomp(const void * v1, const void * v2) {
+    return *((int*)v1) < *((int*)v2);
+}
 
-    if (argc != 2) {
-        printf("usage: sim num_trials\n");
+int main(int argc, const char ** argv) {
+    if (argc != 5) {
+        printf("usage: sim member_contrib member_detriment num_groups num_joiners\n");
         return 0;
     }
 
-    size_t trials = atoi(argv[1]);
+    // simulation parameters
+    params_t ps;
+    ps.member_contrib = atof(argv[1]);
+    ps.member_detriment = atof(argv[2]);
+    ps.num_groups = atoi(argv[3]);
+    ps.num_joiners = atoi(argv[4]);
 
-    for (size_t t = 0; t < trials; t++) {
-        size_t vlen;
-        int * values = trial(&ps, &vlen);
+    size_t vlen;
+    int * values = trial(&ps, &vlen);
 
-        for (size_t j = 0; j < vlen; j++) {
-            printf("%d\n", values[j]);
+    qsort(values, vlen, sizeof * values, intcomp);
+
+    int last_value = values[0];
+    int counter = 1;
+
+    printf("group size, occurances\n");
+    for (size_t i = 1; i < vlen; i++) {
+        if (values[i] == last_value) {
+            counter += 1;
+        } else {
+            printf("%d,%d\n", last_value, counter);
+            last_value = values[i];
+            counter = 1;
         }
-
-        free(values);
     }
+    printf("%d,%d\n", last_value, counter);
+
+    free(values);
 
     return 0;
 }
