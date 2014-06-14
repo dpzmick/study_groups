@@ -130,17 +130,23 @@ int main(int argc, const char ** argv) {
     int last_value = values[0];
     int counter = 1;
 
-    printf("group size, occurances\n");
+    // print something for the python vis script
+    double optimal = ps.member_contrib / ps.member_detriment;
+    printf("title a=%f b=%f groups=%d joiners=%d\n",
+            ps.member_contrib, ps.member_detriment, ps.num_groups, ps.num_joiners);
+    printf("title optimal=%f\n", optimal);
+
     for (size_t i = 1; i < vlen; i++) {
         if (values[i] == last_value) {
             counter += 1;
         } else {
-            printf("%d,%d\n", last_value, counter);
+            //printf("%d,%d\n", last_value, counter);
+            printf("%d\t%d\n", last_value, counter);
             last_value = values[i];
             counter = 1;
         }
     }
-    printf("%d,%d\n", last_value, counter);
+    printf("%d\t%d\n", last_value, counter);
 
     free(values);
 

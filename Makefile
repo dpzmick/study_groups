@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-c -std=c99 -Wall
+CFLAGS=-c -std=c99 -Wall -O3
 LD=gcc
 LDFLAGS=
 
@@ -12,3 +12,7 @@ sim: $(OBJECTS)
 
 sim.o: sim.c
 	$(CC) $(CFLAGS) $^
+
+clean:
+	-rm *.o
+	rm sim
