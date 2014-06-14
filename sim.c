@@ -1,6 +1,6 @@
 /**
  * simple program that prints to stdout the results of a simulation in which
- * people join study groups as a csv file where
+ * people join study groups as a csv file (kind of) where
  * group_size, amount occurred
  *
  */
