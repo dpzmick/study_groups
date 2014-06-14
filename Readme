@@ -1,0 +1,12 @@
+A model of study groups and how they grow, will expand and make more complex in
+the future.
+
+to use:
+
+make should be able to build the code anywhere gcc is installed
+
+./sim (to print usage)
+
+./sim <your values> | ./vis.py
+
+if matplotlib and python2 are installed, you should see a plot
