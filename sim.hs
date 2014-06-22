@@ -1,3 +1,4 @@
+import Data.List (sort)
 import System.Random.Shuffle (shuffle')
 import System.Random (getStdGen, RandomGen, randomRs)
 
@@ -76,9 +77,8 @@ splitGroups ps gen chances gs i =
             g = gs !! i
             keepers = div g 2
             leavers = g - keepers
-            almostModified = take (i-1) gs ++ drop (i+1) gs
-            modified = [keepers] ++ simLoop ps gen cs almostModified leavers
-
+            almostModified = take (i) gs ++ drop (i+1) gs
+            modified = keepers : simLoop ps gen cs almostModified leavers
 
 simLoop :: RandomGen g => Params -> g -> [Double] -> [Group] -> Integer -> [Group]
 simLoop ps gen givenChances gs remainingJoiners =
@@ -89,23 +89,23 @@ simLoop ps gen givenChances gs remainingJoiners =
             chances = tail givenChances
             res = splitGroups ps gen (tail chances) (oneJoin ps gen chances gs) (length gs - 1)
 
+trial ps gen chances = simLoop ps gen chances gs (numJoiners ps)
+    where gs = take (fromIntegral (numGroups ps)) emptyGroups
+
 main :: IO ()
 main = do
         let ps = Params {
             memberContrib   = 1.0,
             memberDetriment = 0.5,
             selflessness    = 0.5,
-            splitChance     = 1.0,
-            numJoiners      = 4,
-            numGroups       = 4
+            splitChance     = 0.5,
+            numJoiners      = 7,
+            numGroups       = 10
         }
-
-        print (optimalSize ps)
-
-        let gs = take (fromIntegral (numGroups ps)) emptyGroups
 
         shuffleGen <- getStdGen
         let chances = randomRs (0.0,1.0) shuffleGen :: [Double]
 
-        let result = simLoop ps shuffleGen chances gs (numJoiners ps)
-        print result
+        let result = trial ps shuffleGen chances
+        print (sort result)
+        print (length result)
