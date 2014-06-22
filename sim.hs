@@ -5,12 +5,15 @@ data Params = Params {
     memberContrib   :: Double,
     memberDetriment :: Double,
     selflessness    :: Double,
+    splitChance     :: Double,
     numJoiners      :: Integer,
     numGroups       :: Integer
 }
 
--- group stuff
+optimalSize :: Params -> Integer
+optimalSize (Params a b _ _ _ _) = floor (a / b)
 
+-- group stuff
 type Group = Integer
 
 -- allow a group to become more complex if needed. Is this bad style?
@@ -24,25 +27,14 @@ emptyGroups :: [Group]
 emptyGroups = [0,0..] :: [Group]
 
 fitness :: Params -> Group -> Double
-fitness (Params a b _ _ _) g =
+fitness (Params a b _ _ _ _) g =
         a * fromIntegral (size g) - (b / 2) * ( fromIntegral (size g) ^ (2 :: Integer) )
 
--- sim stuff
-sim :: RandomGen g => Params -> g -> [Double] -> [Group]
-sim ps gen chances =
-        simIterate ps gen chances startingGroups (fromIntegral (numJoiners ps))
-    where
-        startingGroups = take (fromIntegral (numGroups ps)) emptyGroups
-
-simIterate :: RandomGen g => Params -> g -> [Double] -> [Group] -> Integer -> [Group]
-simIterate ps gen chances gs remain
-    | remain /= 1 = simIterate ps gen (tail chances) (oneJoin ps gen chances gs) (remain - 1)
-    | remain == 1 = oneJoin ps gen chances gs
-    | otherwise = error "remain should never drop below 1"
-
 -- find all groups with best fitness, randomly pick one and join it
+-- sometimes, we feel a bit selfless, so we don't join a group when we will
+-- decrease the fitness of the group
 oneJoin :: RandomGen g => Params -> g -> [Double] -> [Group] -> [Group]
-oneJoin ps@(Params _ _ s _ _) gen (chance:_) gs =
+oneJoin ps@(Params _ _ s _ _ _) gen (chance:_) gs =
         if chance <= s
             then selflessJoin ps gen gs
             else normalJoin ps gen gs
@@ -67,8 +59,53 @@ selflessJoin ps gen gs =
             damaged          = filter (\ g -> fitness ps (addMember g) <  fitness ps g) gs
             undamaged = shuffle' undamagedOrdered (length undamagedOrdered) gen
 
+-- some monadic stuff, make's my headache go away a bit
+splitGroups :: RandomGen g => Params -> g -> [Double] -> [Group] -> Int -> [Group]
+splitGroups ps gen chances gs i =
+        if (head cs) <= (splitChance ps) && size g > optimalSize ps
+            then
+                if i == 0
+                    then modified
+                    else splitGroups ps gen cs modified (i-1)
+            else
+                if i == 0
+                    then gs
+                    else splitGroups ps gen cs gs (i-1)
+        where
+            cs = tail chances
+            g = gs !! i
+            keepers = div g 2
+            leavers = g - keepers
+            almostModified = take (i-1) gs ++ drop (i+1) gs
+            modified = [keepers] ++ simLoop ps gen cs almostModified leavers
+
+
+simLoop :: RandomGen g => Params -> g -> [Double] -> [Group] -> Integer -> [Group]
+simLoop ps gen givenChances gs remainingJoiners =
+        if remainingJoiners == 1
+            then res
+            else simLoop ps gen chances res (remainingJoiners - 1)
+        where
+            chances = tail givenChances
+            res = splitGroups ps gen (tail chances) (oneJoin ps gen chances gs) (length gs - 1)
+
 main :: IO ()
 main = do
+        let ps = Params {
+            memberContrib   = 1.0,
+            memberDetriment = 0.5,
+            selflessness    = 0.5,
+            splitChance     = 1.0,
+            numJoiners      = 4,
+            numGroups       = 4
+        }
+
+        print (optimalSize ps)
+
+        let gs = take (fromIntegral (numGroups ps)) emptyGroups
+
         shuffleGen <- getStdGen
         let chances = randomRs (0.0,1.0) shuffleGen :: [Double]
-        print (sim (Params 1 0.5 0.5 5 10) shuffleGen chances)
+
+        let result = simLoop ps shuffleGen chances gs (numJoiners ps)
+        print result
