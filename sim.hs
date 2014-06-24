@@ -1,6 +1,9 @@
-import Data.List (sort)
 import System.Random.Shuffle (shuffle')
-import System.Random (getStdGen, RandomGen, randomRs)
+import System.Random (newStdGen, RandomGen, randomRs)
+import System.Environment (getArgs)
+import Control.Monad (replicateM)
+import Text.Printf
+import qualified Data.Map as Map
 
 data Params = Params {
     memberContrib   :: Double,
@@ -8,11 +11,12 @@ data Params = Params {
     selflessness    :: Double,
     splitChance     :: Double,
     numJoiners      :: Integer,
-    numGroups       :: Integer
+    numGroups       :: Integer,
+    trials          :: Integer
 }
 
 optimalSize :: Params -> Integer
-optimalSize (Params a b _ _ _ _) = floor (a / b)
+optimalSize (Params a b _ _ _ _ _) = floor (a / b)
 
 -- group stuff
 type Group = Integer
@@ -28,14 +32,14 @@ emptyGroups :: [Group]
 emptyGroups = [0,0..] :: [Group]
 
 fitness :: Params -> Group -> Double
-fitness (Params a b _ _ _ _) g =
+fitness (Params a b _ _ _ _ _) g =
         a * fromIntegral (size g) - (b / 2) * ( fromIntegral (size g) ^ (2 :: Integer) )
 
 -- find all groups with best fitness, randomly pick one and join it
 -- sometimes, we feel a bit selfless, so we don't join a group when we will
 -- decrease the fitness of the group
 oneJoin :: RandomGen g => Params -> g -> [Double] -> [Group] -> [Group]
-oneJoin ps@(Params _ _ s _ _ _) gen (chance:_) gs =
+oneJoin ps@(Params _ _ s _ _ _ _) gen (chance:_) gs =
         if chance <= s
             then selflessJoin ps gen gs
             else normalJoin ps gen gs
@@ -60,10 +64,10 @@ selflessJoin ps gen gs =
             damaged          = filter (\ g -> fitness ps (addMember g) <  fitness ps g) gs
             undamaged = shuffle' undamagedOrdered (length undamagedOrdered) gen
 
--- some monadic stuff, make's my headache go away a bit
+-- welcome to the jungle
 splitGroups :: RandomGen g => Params -> g -> [Double] -> [Group] -> Int -> [Group]
 splitGroups ps gen chances gs i =
-        if (head cs) <= (splitChance ps) && size g > optimalSize ps
+        if head cs <= splitChance ps && size g > optimalSize ps
             then
                 if i == 0
                     then modified
@@ -77,7 +81,7 @@ splitGroups ps gen chances gs i =
             g = gs !! i
             keepers = div g 2
             leavers = g - keepers
-            almostModified = take (i) gs ++ drop (i+1) gs
+            almostModified = take i gs ++ drop (i+1) gs
             modified = keepers : simLoop ps gen cs almostModified leavers
 
 simLoop :: RandomGen g => Params -> g -> [Double] -> [Group] -> Integer -> [Group]
@@ -89,23 +93,42 @@ simLoop ps gen givenChances gs remainingJoiners =
             chances = tail givenChances
             res = splitGroups ps gen (tail chances) (oneJoin ps gen chances gs) (length gs - 1)
 
-trial ps gen chances = simLoop ps gen chances gs (numJoiners ps)
-    where gs = take (fromIntegral (numGroups ps)) emptyGroups
+trial :: Params -> IO [Group]
+trial ps = do
+    let gs = take (fromIntegral (numGroups ps)) emptyGroups
+    gen <- newStdGen
+    let chances = randomRs (0.0,1.0) gen :: [Double]
+    return (simLoop ps gen chances gs (numJoiners ps))
 
 main :: IO ()
 main = do
-        let ps = Params {
-            memberContrib   = 1.0,
-            memberDetriment = 0.5,
-            selflessness    = 0.5,
-            splitChance     = 0.5,
-            numJoiners      = 7,
-            numGroups       = 10
-        }
+        -- TODO visulize the results
+        args <- getArgs
 
-        shuffleGen <- getStdGen
-        let chances = randomRs (0.0,1.0) shuffleGen :: [Double]
+        if length args /= 7
+            then do
+                putStrLn "usage: sim memberContrib memberDetriment selflessness splitChance numJoiners numGroups trials"
+                return ()
+            else do
+                let ps = Params {
+                    memberContrib = read (args !! 0) :: Double,
+                    memberDetriment = read (args !! 1) :: Double,
+                    selflessness = read (args !! 2) :: Double,
+                    splitChance = read (args !! 3) :: Double,
+                    numJoiners = read (args !! 4) :: Integer,
+                    numGroups = read (args !! 5) :: Integer,
+                    trials = read (args !! 6) :: Integer
+                }
+                res <- replicateM (fromIntegral (trials ps)) (trial ps)
+                let non_zero = filter (/= 0) (concat res)
+                let total_groups = fromIntegral (length non_zero) :: Double
+                let above_optimal = fromIntegral (length (filter (> optimalSize ps) non_zero)) :: Double
 
-        let result = trial ps shuffleGen chances
-        print (sort result)
-        print (length result)
+                printf "% -20s: %f\n" "member contribution" (memberContrib ps)
+                printf "% -20s: %f\n" "member detriment"    (memberDetriment ps)
+                printf "% -20s: %f\n" "selflessness"        (selflessness ps)
+                printf "% -20s: %f\n" "chance of split"     (splitChance ps)
+                printf "% -20s: %d\n" "joiners"             (numJoiners ps)
+                printf "% -20s: %d\n" "max groups"          (numGroups ps)
+                printf "% -20s: %d\n" "trials"              (trials ps)
+                printf "% -20s: %f\n" "effectiveness"       (above_optimal / total_groups)
