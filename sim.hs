@@ -3,7 +3,6 @@ import System.Random (newStdGen, RandomGen, randomRs)
 import System.Environment (getArgs)
 import Control.Monad (replicateM)
 import Text.Printf
-import qualified Data.Map as Map
 
 data Params = Params {
     memberContrib   :: Double,
@@ -131,4 +130,4 @@ main = do
                 printf "% -20s: %d\n" "joiners"             (numJoiners ps)
                 printf "% -20s: %d\n" "max groups"          (numGroups ps)
                 printf "% -20s: %d\n" "trials"              (trials ps)
-                printf "% -20s: %f\n" "effectiveness"       (above_optimal / total_groups)
+                printf "% -20s: %f\n" "effectiveness"       (1 - (above_optimal / total_groups))

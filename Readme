@@ -1,12 +1,28 @@
-A model of study groups and how they grow, will expand and make more complex in
-the future.
+Requirements:
+-------------
+* Haskell and a couple haskell packages
+* python
+* R - lattice package
+* something that doesn't mind / in filenames, because I used strings for file
+  paths, not filename joins like I should have
 
-to use:
+To compile the simulator:
+-------------------------
 
-make should be able to build the code anywhere gcc is installed
+ghc -O2 --make sim.hs
 
-./sim (to print usage)
+Simulator usage:
+---------------
 
-./sim <your values> | ./vis.py
+usage: sim memberContrib memberDetriment selflessness splitChance numJoiners numGroups trials
 
-if matplotlib and python2 are installed, you should see a plot
+Getting data:
+-------------
+* Edit run_test.py with appropriate parameters and run it
+* the script will delete and recreate the directories
+    * <test name>_data
+    * <test name>_results
+* in the data directory will be the raw output from each run of the simulator
+* in the results directory will be the "matrix" R uses to generate its plot,
+  which is also in the results directory
+* also in the results directory is a dump of the parameters used in this test
