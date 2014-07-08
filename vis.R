@@ -18,4 +18,4 @@ pdf(file=outfname)
 data <- read.csv(infname, header=FALSE)
 levelplot(data.matrix(data),
           xlab="selflessness", ylab="split chance",
-          col.regions=gray(0:100/100))
+          col.regions=gray(100:0/100))

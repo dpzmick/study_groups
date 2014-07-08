@@ -3,24 +3,24 @@ import os
 import shutil
 from multiprocessing import Process, Pool
 
-test_name = 'just_playing'
+test_name = 'test4'
 data_dir = test_name + '_data'
 res_dir = test_name + '_results'
 
 # unchanging values
 member_contrib = 1.0
 member_detriment = 0.5
-num_joiners = 7
-max_groups = 10
-trials = 10
+num_joiners = 20
+max_groups = 50
+trials = 1000
 
 # changing values
 # for every selflessness value, run every split chance value test
 # selflessness values
-selflessness = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+selflessness = [float(x)/100 for x in range(0,100,5)]
 
 # split chance values
-split_chance = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+split_chance = [float(x)/100 for x in range(0,100,5)]
 
 def run_test(s, sp):
     vals = (member_contrib, member_detriment, s, sp, num_joiners, max_groups, trials)
@@ -31,6 +31,20 @@ def run_test(s, sp):
     result = subprocess.check_output(exe, shell=True)
 
     return (s, sp, result, fname)
+
+def make_matrix(matrix_name, datums, index_to_write):
+    # write results as a matrix
+    # for vis with R
+    xyz = open(matrix_name, 'w')
+    for s in selflessness:
+        i = 0
+        for sp in split_chance:
+            if i != 0:
+                xyz.write(',')
+            xyz.write(str(datums[s][sp][index_to_write]))
+            i += 1
+        xyz.write('\n')
+    xyz.close()
 
 # start here
 
@@ -86,23 +100,34 @@ for result in results:
 
     # get values we care about
     # we already have s and sp
-    eff = float(results.split('\n')[7].split(':')[1])
-    datums[s][sp] = eff
+    opt = float(results.split('\n')[7].split(':')[1])
+    below_opt = float(results.split('\n')[8].split(':')[1])
+    above_opt = float(results.split('\n')[9].split(':')[1])
+    avg_fit = float(results.split('\n')[10].split(':')[1])
+
+    datums[s][sp] = (opt, below_opt, above_opt, avg_fit)
 
 print "Generating image"
-# write results as a matrix
-# for vis with R
-matrix_name = res_dir + '/' + test_name + '.matrix'
-xyz = open(matrix_name, 'w')
-for s in selflessness:
-    i = 0
-    for sp in split_chance:
-        if i != 0:
-            xyz.write(',')
-        xyz.write(str(datums[s][sp]))
-        i += 1
-    xyz.write('\n')
-xyz.close()
+opt_matrix_name = res_dir + '/' + 'optimal.matrix'
+below_opt_matrix_name = res_dir + '/' + 'below_optimal.matrix'
+above_opt_matrix_name = res_dir + '/' + 'above_optimal.matrix'
+avg_fit_matrix = res_dir + '/avg_fit.matrix'
 
-pdf_name = res_dir + '/' + test_name + '.pdf'
-print subprocess.check_output("Rscript vis.R %s %s" % (matrix_name, pdf_name), shell=True)
+make_matrix(opt_matrix_name, datums, 0)
+make_matrix(below_opt_matrix_name, datums, 1)
+make_matrix(above_opt_matrix_name, datums, 2)
+make_matrix(avg_fit_matrix, datums, 3)
+
+optimal_pdf_name = res_dir + '/optimal.pdf'
+below_optimal_pdf_name = res_dir + '/below_optimal.pdf'
+above_optimal_pdf_name = res_dir + '/above_optimal.pdf'
+avg_fit_pdf = res_dir + '/avg_fit.pdf'
+
+print subprocess.check_output("Rscript vis.R %s %s" % (opt_matrix_name,
+    optimal_pdf_name), shell=True)
+print subprocess.check_output("Rscript vis.R %s %s" % (below_opt_matrix_name,
+    below_optimal_pdf_name), shell=True)
+print subprocess.check_output("Rscript vis.R %s %s" % (above_opt_matrix_name,
+    above_optimal_pdf_name), shell=True)
+print subprocess.check_output("Rscript vis.R %s %s" % (avg_fit_matrix,
+    avg_fit_pdf), shell=True)

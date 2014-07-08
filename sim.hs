@@ -3,6 +3,7 @@ import System.Random (newStdGen, RandomGen, randomRs)
 import System.Environment (getArgs)
 import Control.Monad (replicateM)
 import Text.Printf
+import Data.List (genericLength)
 
 data Params = Params {
     memberContrib   :: Double,
@@ -15,7 +16,7 @@ data Params = Params {
 }
 
 optimalSize :: Params -> Integer
-optimalSize (Params a b _ _ _ _ _) = floor (a / b)
+optimalSize (Params a b _ _ _ _ _) = round (a / b)
 
 -- group stuff
 type Group = Integer
@@ -121,7 +122,11 @@ main = do
                 res <- replicateM (fromIntegral (trials ps)) (trial ps)
                 let non_zero = filter (/= 0) (concat res)
                 let total_groups = fromIntegral (length non_zero) :: Double
+                let optimal = fromIntegral (length (filter (== optimalSize ps) non_zero)) :: Double
                 let above_optimal = fromIntegral (length (filter (> optimalSize ps) non_zero)) :: Double
+                let below_optimal = fromIntegral (length (filter (< optimalSize ps) non_zero)) :: Double
+                let fitnesses = map (fitness ps) non_zero
+                let avg_fitness = sum fitnesses / genericLength fitnesses
 
                 printf "% -20s: %f\n" "member contribution" (memberContrib ps)
                 printf "% -20s: %f\n" "member detriment"    (memberDetriment ps)
@@ -130,4 +135,7 @@ main = do
                 printf "% -20s: %d\n" "joiners"             (numJoiners ps)
                 printf "% -20s: %d\n" "max groups"          (numGroups ps)
                 printf "% -20s: %d\n" "trials"              (trials ps)
-                printf "% -20s: %f\n" "effectiveness"       (1 - (above_optimal / total_groups))
+                printf "% -20s: %f\n" "optimal percent"     (optimal / total_groups)
+                printf "% -20s: %f\n" "below optimal"       (below_optimal / total_groups)
+                printf "% -20s: %f\n" "above optimal"       (above_optimal / total_groups)
+                printf "% -20s: %f\n" "avg fitness"         (avg_fitness)
